@@ -1,0 +1,12 @@
+bee migrate -driver="postgres" -conn="postgres://postgres:123456@localhost:5432/Demo?sslmode=disable"
+bee generate migration
+
+
+CREATE SEQUENCE computer_id_seq;
+CREATE TABLE computer (
+    Id                                   bigint NOT NULL DEFAULT nextval('computer_id_seq'),
+	Name                                 varchar(64)  NOT NULL,
+    Producer                             varchar(256) NOT NULL,
+    Type                                 varchar(256) NOT NULL,
+);
+ALTER SEQUENCE computer_id_seq OWNED BY computer.id;
