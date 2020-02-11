@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -23,9 +22,6 @@ func (u *UserController) Login() {
 	sess := u.StartSession()
 	var loginRequest models.LoginRequest
 	json.Unmarshal(u.Ctx.Input.RequestBody, &loginRequest)
-	log.Println(loginRequest)
-	log.Println(loginRequest.UserId)
-	log.Println(loginRequest.Password)
 	count, err := implement.Login(loginRequest.UserId, loginRequest.Password)
 	if err != nil {
 		u.Ctx.Output.SetStatus(http.StatusInternalServerError)
@@ -94,7 +90,6 @@ func (u *UserController) CheckAuth() bool {
 	authCd := u.Ctx.Input.Header("authCd")
 
 	authSes := sess.Get(authCd)
-	log.Println(authCd)
 	if authSes == nil {
 		u.Ctx.Output.SetStatus(http.StatusUnauthorized)
 		u.Data["json"] = models.Msg{
