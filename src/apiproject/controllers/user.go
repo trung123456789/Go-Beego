@@ -16,14 +16,22 @@ type UserController struct {
 
 // @Title CreateUser
 // @Description create users
-// @Param	body		body 	models.User	true		"body for user content"
-// @Success 200 {int} models.User.Id
+// @param	password	body 	string	true		"body for user content"
+// @Success 201 {int} models.UserInfo.Id
 // @Failure 403 body is empty
 // @router /add [post]
 func (u *UserController) Post() {
-	var user models.User
+	var user models.UserInfo
 	if u.CheckAuth() {
-		_ = json.Unmarshal(u.Ctx.Input.RequestBody, &user)
+		errJson := json.Unmarshal(u.Ctx.Input.RequestBody, &user)
+		if errJson != nil {
+			u.Ctx.Output.SetStatus(http.StatusBadRequest)
+			u.Data["json"] = models.Msg{
+				StatusCd: 0,
+				Message:  errJson.Error(),
+			}
+			u.ServeJSON()
+		}
 		uid, err := implement.AddUser(user)
 		if err != nil {
 			u.Ctx.Output.SetStatus(http.StatusBadRequest)
@@ -45,18 +53,29 @@ func (u *UserController) Post() {
 func (u *UserController) GetAll() {
 	// Check if user is logged in
 	if u.CheckAuth() {
-		users := implement.GetAllUsers()
+		users, err := implement.GetAllUsers()
+		if err != nil {
+			u.Ctx.Output.SetStatus(http.StatusInternalServerError)
+			u.Data["json"] = models.Msg{
+				StatusCd: 1,
+				Message:  err.Error(),
+			}
+			u.ServeJSON()
+			return
+		}
 		u.Data["json"] = users
 		u.ServeJSON()
+		return
 	}
 }
 
 // @Title Get Some User
 // @Description get user by user info
+// @Param   id     query   int true       "task id"
 // @Success 200 {object} models.User
 // @router /get/One [post]
 func (u *UserController) PostOneUser() {
-	var user models.User
+	var user models.UserInfo
 	if u.CheckAuth() {
 		_ = json.Unmarshal(u.Ctx.Input.RequestBody, &user)
 		log.Println(user)
@@ -85,9 +104,9 @@ func (u *UserController) Put() {
 	if u.CheckAuth() {
 		uid := u.GetString(":uid")
 		if uid != "" {
-			var user models.User
+			var user models.UserInfo
 			_ = json.Unmarshal(u.Ctx.Input.RequestBody, &user)
-			uu, err := implement.UpdateUser(uid, &user)
+			uu, err := implement.UpdateUser(uid, user)
 			if err != nil {
 				u.Ctx.Output.SetStatus(http.StatusInternalServerError)
 				u.Data["json"] = models.Msg{

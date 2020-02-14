@@ -7,32 +7,29 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
-
-// @Title Login
-// @Description Logs user into the system
-// @Param	username		query 	string	true		"The username for login"
-// @Param	password		query 	string	true		"The password for login"
-// @Success 200 {string} login success
-// @Failure 403 user not exist
+// @Param user_id body string true "User Id"
+// @Param password body string true "password"
 // @router /login [post]
 func (u *UserController) Login() {
 	// Check if user is logged in
 	sess := u.StartSession()
 	var loginRequest models.LoginRequest
-	json.Unmarshal(u.Ctx.Input.RequestBody, &loginRequest)
-	count, err := implement.Login(loginRequest.UserId, loginRequest.Password)
-	if err != nil {
-		u.Ctx.Output.SetStatus(http.StatusInternalServerError)
+	errJson := json.Unmarshal(u.Ctx.Input.RequestBody, &loginRequest)
+	if errJson != nil {
+		log.Println("err: ", errJson)
+		u.Ctx.Output.SetStatus(http.StatusBadRequest)
 		u.Data["json"] = models.Msg{
 			StatusCd: 1,
-			Message: err.Error(),
+			Message:  errJson.Error(),
 		}
 		u.ServeJSON()
 		return
 	}
-	if count == 0 {
+	ok, err := implement.Login(loginRequest.UserId, loginRequest.Password)
+	if !ok || err != nil {
 		u.Ctx.Output.SetStatus(http.StatusUnauthorized)
 		u.Data["json"] = models.Msg{
 			StatusCd: 1,
@@ -79,6 +76,7 @@ func (u *UserController) Logout() {
 	return
 }
 
+// Auto generate token
 func tokenGenerator() string {
 	b := make([]byte, 32)
 	rand.Read(b)
@@ -97,7 +95,6 @@ func (u *UserController) CheckAuth() bool {
 			Message:  conf.IniConf.String("loginErr"),
 		}
 		u.ServeJSON()
-		return false
 	}
 	return true
 }

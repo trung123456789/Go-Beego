@@ -2,45 +2,21 @@ package implement
 
 import (
 	"apiproject/conf"
-	"apiproject/database/connection"
+	"apiproject/models"
 	"errors"
-	"fmt"
-	"log"
+	"github.com/astaxie/beego/orm"
 )
 
-func DeleteUser(uid string) (string, error) {
-	var count int
-	database, errConnectDb := connection.CreateConnection()
-	if errConnectDb != nil {
-		panic(errConnectDb)
+func DeleteUser(uid string) (map[string]string, error) {
+	var err error
+	var num int64
+	m := make(map[string]string)
+	o := orm.NewOrm()
+	if num, err = o.Delete(&models.UserInfo{UserId: uid}, "UserId"); err == nil && num > 0 {
+		m["user_id"] = uid
+	} else {
+		err = errors.New(conf.IniConf.String("userNotExist"))
 	}
-	defer database.Close()
+	return m, err
 
-	// Check user exist
-	querySelect := `
-		SELECT COUNT(*)
-		FROM user_infos
-		WHERE user_id = $1
-	`
-	log.Println(querySelect)
-	errSelect := database.QueryRow(querySelect, uid).Scan(&count)
-	if errSelect != nil {
-		panic(errSelect)
-	}
-	if count == 0 {
-		return "", errors.New(conf.IniConf.String("userNotExist"))
-	}
-	// Update user
-	queryUpdate := `
-		DELETE
-		FROM user_infos 
-		WHERE user_id = $1 returning user_id`
-	log.Println(queryUpdate)
-	_, errQuery := database.Exec(queryUpdate, uid)
-
-	if errQuery != nil {
-		return "", errQuery
-	}
-	uid = fmt.Sprintf(conf.IniConf.String("delSuccess"), uid)
-	return uid, nil
 }
