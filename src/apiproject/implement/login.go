@@ -1,28 +1,25 @@
 package implement
 
 import (
-	"apiproject/database/connection"
-	"log"
+	"apiproject/models"
+	"github.com/astaxie/beego/orm"
+	"reflect"
 )
 
-func Login(id, password string) (int, error) {
-	var count int
-	database, errConnectDb := connection.CreateConnection()
-	if errConnectDb != nil {
-		return 0, errConnectDb
-	}
-	defer  database.Close()
+func Login(id, password string) (bool, error) {
 
-	querySelect := `
-		SELECT COUNT(*)
-		FROM user_infos
-		WHERE user_id = $1 AND password = $2
-	`
-	errSelect := database.QueryRow(querySelect, id, password).Scan(&count)
-	log.Println("Err:", errSelect)
-	log.Println(querySelect)
+	o := orm.NewOrm()
+	o.Using("default")
+
+	// Get a QuerySeter object. User is table name
+	qs := o.QueryTable("userinfo")
+	userInfo := models.UserInfo{}
+	errSelect := qs.Filter("UserId", id).Filter("Password", password).One(&userInfo)
 	if errSelect != nil {
-		return 0, errSelect
+		return false, errSelect
 	}
-	return count, nil
+	if !reflect.DeepEqual(userInfo, models.UserInfo{}) {
+		return true, nil
+	}
+	return false, nil
 }
