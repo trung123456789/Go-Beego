@@ -18,7 +18,6 @@ func (u *UserController) Login() {
 	logs.Start("LOGIN")
 	sess := u.StartSession()
 	var loginRequest models.LoginRequest
-
 	defer u.deferFunc("LOGIN")
 
 	errJson := json.Unmarshal(u.Ctx.Input.RequestBody, &loginRequest)

@@ -14,11 +14,15 @@ func AddUser(u models.UserInfo) (string, error) {
 	o := orm.NewOrm()
 	o.Using("default")
 
+	password, errPass := HashPassword(u.Password)
+	if errPass != nil {
+		return "", errPass
+	}
 	user := models.UserInfo{
 		UserId:    u.UserId,
 		Name:      u.Name,
 		Age:       u.Age,
-		Password:  u.Password,
+		Password:  password,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
 	}
