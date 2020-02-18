@@ -10,7 +10,7 @@ type UserInfo struct {
 	UserId    string    `orm:"unique" json:"user_id"`
 	Name      string    `json:"user_name"`
 	Age       int       `json:"age"`
-	Password  string    `json:"password"`
+	Password  string    `json:"password" validate:"required,min=8"`
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"created_at"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime);null" json:"updated_at"`
 }

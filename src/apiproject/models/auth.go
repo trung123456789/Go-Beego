@@ -1,8 +1,8 @@
 package models
 
 type LoginRequest struct {
-	UserId   string `json:"user_id"`
-	Password string `json:"password"`
+	UserId   string `json:"user_id" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type LogoutRequest struct {

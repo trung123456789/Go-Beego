@@ -7,27 +7,39 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
-// @Param user_id body string true "User Id"
-// @Param password body string true "password"
+
+// @Param body body models.LoginRequest true "User Id"
+// @Success 201 {string} authCd
+// @Failure 403 body message error login
 // @router /login [post]
 func (u *UserController) Login() {
-	// Check if user is logged in
+	logs.Start("LOGIN")
 	sess := u.StartSession()
 	var loginRequest models.LoginRequest
+
+	defer u.deferFunc("LOGIN")
+
 	errJson := json.Unmarshal(u.Ctx.Input.RequestBody, &loginRequest)
 	if errJson != nil {
-		log.Println("err: ", errJson)
 		u.Ctx.Output.SetStatus(http.StatusBadRequest)
 		u.Data["json"] = models.Msg{
 			StatusCd: 1,
 			Message:  errJson.Error(),
 		}
-		u.ServeJSON()
-		return
+		panic(0)
 	}
+	err := implement.Validate.Struct(loginRequest)
+	if err != nil {
+		u.Ctx.Output.SetStatus(http.StatusBadRequest)
+		u.Data["json"] = models.Msg{
+			StatusCd: 1,
+			Message:  err.Error(),
+		}
+		panic(0)
+	}
+
 	ok, err := implement.Login(loginRequest.UserId, loginRequest.Password)
 	if !ok || err != nil {
 		u.Ctx.Output.SetStatus(http.StatusUnauthorized)
@@ -35,8 +47,7 @@ func (u *UserController) Login() {
 			StatusCd: 1,
 			Message:  conf.IniConf.String("loginErr"),
 		}
-		u.ServeJSON()
-		return
+		panic(0)
 	}
 	authKey := tokenGenerator()
 	sess.Set(authKey, authKey)
@@ -44,8 +55,7 @@ func (u *UserController) Login() {
 		AuthCd: fmt.Sprintf("%v", authKey),
 		UserId: loginRequest.UserId,
 	}
-	u.ServeJSON()
-	return
+	panic(0)
 }
 
 // @Title logout
@@ -55,7 +65,7 @@ func (u *UserController) Login() {
 // @router /logout [get]
 func (u *UserController) Logout() {
 	authCd := u.Ctx.Input.Header("authCd")
-
+	defer u.deferFunc("LOGOUT")
 	sess := u.StartSession()
 	authCdSes := sess.Get(authCd)
 	if authCdSes != nil {
@@ -64,16 +74,14 @@ func (u *UserController) Logout() {
 			StatusCd: 0,
 			Message:  conf.IniConf.String("logoutSuccess"),
 		}
-		u.ServeJSON()
-		return
+		panic(0)
 	}
 	u.Ctx.Output.SetStatus(http.StatusUnauthorized)
 	u.Data["json"] = models.Msg{
 		StatusCd: 1,
 		Message:  conf.IniConf.String("loginErr"),
 	}
-	u.ServeJSON()
-	return
+	panic(0)
 }
 
 // Auto generate token
@@ -97,4 +105,11 @@ func (u *UserController) CheckAuth() bool {
 		u.ServeJSON()
 	}
 	return true
+}
+
+func (u *UserController) deferFunc(apiName string) {
+	if r := recover(); r != nil {
+		logs.End(apiName)
+		u.ServeJSON()
+	}
 }

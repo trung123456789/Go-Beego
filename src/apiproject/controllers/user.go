@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"apiproject/implement"
+	"apiproject/logconf"
 	"apiproject/models"
 	"encoding/json"
 	"github.com/astaxie/beego"
@@ -14,6 +15,10 @@ type UserController struct {
 	beego.Controller
 }
 
+var (
+	logs = logconf.NewLogger("UserController")
+)
+
 // @Title CreateUser
 // @Description create users
 // @param	password	body 	string	true		"body for user content"
@@ -21,8 +26,10 @@ type UserController struct {
 // @Failure 403 body is empty
 // @router /add [post]
 func (u *UserController) Post() {
+	logs.Start("ADD USER")
 	var user models.UserInfo
 	if u.CheckAuth() {
+		defer u.deferFunc("ADD USER")
 		errJson := json.Unmarshal(u.Ctx.Input.RequestBody, &user)
 		if errJson != nil {
 			u.Ctx.Output.SetStatus(http.StatusBadRequest)
@@ -30,8 +37,19 @@ func (u *UserController) Post() {
 				StatusCd: 0,
 				Message:  errJson.Error(),
 			}
-			u.ServeJSON()
+			panic(0)
 		}
+
+		err := implement.Validate.Struct(user)
+		if err != nil {
+			u.Ctx.Output.SetStatus(http.StatusBadRequest)
+			u.Data["json"] = models.Msg{
+				StatusCd: 1,
+				Message:  err.Error(),
+			}
+			panic(0)
+		}
+
 		uid, err := implement.AddUser(user)
 		if err != nil {
 			u.Ctx.Output.SetStatus(http.StatusBadRequest)
@@ -39,10 +57,11 @@ func (u *UserController) Post() {
 				StatusCd: 0,
 				Message:  err.Error(),
 			}
-			u.ServeJSON()
+			panic(0)
 		}
 		u.Data["json"] = map[string]string{"uid": uid}
 		u.ServeJSON()
+		panic(0)
 	}
 }
 
@@ -51,7 +70,7 @@ func (u *UserController) Post() {
 // @Success 200 {object} models.User
 // @router /get/All [get]
 func (u *UserController) GetAll() {
-	// Check if user is logged in
+	logs.Start("GET ALL")
 	if u.CheckAuth() {
 		users, err := implement.GetAllUsers()
 		if err != nil {
@@ -65,6 +84,7 @@ func (u *UserController) GetAll() {
 		}
 		u.Data["json"] = users
 		u.ServeJSON()
+		logs.End("GET ALL")
 		return
 	}
 }
